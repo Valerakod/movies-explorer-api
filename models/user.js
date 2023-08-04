@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
 const AuthentificationError = require('../errors/AuthentificationError');
+const MESSAGES = require('../utils/messages');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -16,7 +17,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     validate: {
       validator: (email) => validator.isEmail(email),
-      message: 'Email address is invalid',
+      message: MESSAGES.INVALID_EMAIL,
     },
     dropDups: true,
   },
@@ -38,19 +39,19 @@ userSchema.methods.toJSON = function () {
 
 userSchema.statics.findUserByCredentials = function (email, password) {
   if (!password || password.length < 8) {
-    throw new AuthentificationError('Email or password is not correct');
+    throw new AuthentificationError(MESSAGES.AUTHENTIFICATION_ERROR);
   }
-  return this.findOne({ email }).select('+password')
+  return this.findOne({ email })
+    .select('+password')
     .orFail(() => {
-      throw new AuthentificationError('Email or password is not correct');
+      throw new AuthentificationError(MESSAGES.AUTHENTIFICATION_ERROR);
     })
-    .then((user) => bcrypt.compare(password, user.password)
-      .then((matched) => {
-        if (!matched) {
-          throw new AuthentificationError('Email or password is not correct');
-        }
-        return user;
-      }));
+    .then((user) => bcrypt.compare(password, user.password).then((matched) => {
+      if (!matched) {
+        throw new AuthentificationError(MESSAGES.AUTHENTIFICATION_ERROR);
+      }
+      return user;
+    }));
 };
 
 module.exports = mongoose.model('user', userSchema);

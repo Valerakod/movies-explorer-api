@@ -7,6 +7,8 @@ const BadRequestError = require('../errors/BadRequestError');
 const AuthentificationError = require('../errors/AuthentificationError');
 const AlreadyExistsError = require('../errors/AlreadyExistsError');
 const NotFoundError = require('../errors/NotFoundError');
+const MESSAGES = require('../utils/messages');
+const { JWT_SECRET } = require('../utils/constants');
 
 const login = (req, res, next) => {
   const { email, password } = req.body;
@@ -15,15 +17,15 @@ const login = (req, res, next) => {
     .select('+password')
     .then((user) => {
       if (!user) {
-        next(new AuthentificationError('Email or password is not correct'));
+        next(new AuthentificationError(MESSAGES.AUTHENTIFICATION_ERROR));
       }
 
       return bcrypt.compare(password, user.password).then((matched) => {
         if (!matched) {
-          next(new AuthentificationError('Email or password is not correct'));
+          next(new AuthentificationError(MESSAGES.AUTHENTIFICATION_ERROR));
         }
         return res.send({
-          token: jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+          token: jwt.sign({ _id: user._id }, JWT_SECRET, {
             expiresIn: '7d',
           }),
         });
@@ -40,13 +42,7 @@ const deleteAuth = (req, res) => {
       sameSite: 'None',
       secure: true,
     })
-    .send({ message: 'Authorization canceled' });
-};
-
-const getAllUsers = (req, res, next) => {
-  User.find({})
-    .then((users) => res.send({ users }))
-    .catch(next);
+    .send({ message: MESSAGES.LOGGED_OUT });
 };
 
 const getUserById = (req, res, next) => {
@@ -56,9 +52,9 @@ const getUserById = (req, res, next) => {
     .then((user) => res.status(constants.HTTP_STATUS_OK).send(user))
     .catch((error) => {
       if (error instanceof Error.CastError) {
-        next(new BadRequestError('oh no!'));
+        next(new BadRequestError(MESSAGES.BAD_REQUEST_ERROR));
       } else if (error instanceof Error.DocumentNotFoundError) {
-        next(new NotFoundError(`User with id: ${id} was not found `));
+        next(new NotFoundError(MESSAGES.USER_NOT_FOUND_ERROR));
       } else {
         next(error);
       }
@@ -66,33 +62,25 @@ const getUserById = (req, res, next) => {
 };
 
 const createNewUser = (req, res, next) => {
-  const {
-    name, about, avatar, email, password,
-  } = req.body;
+  const { name, email, password } = req.body;
 
   bcrypt
     .hash(password, 10)
     .then((hash) => User.create({
       name,
-      about,
-      avatar,
       email,
       password: hash,
     }))
     .then((user) => res.status(constants.HTTP_STATUS_CREATED).send({
       name: user.name,
-      about: user.about,
-      avatar: user.avatar,
       email: user.email,
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(
-          new BadRequestError('Incorrect data was passed during user creation.'),
-        );
+        next(new BadRequestError(MESSAGES.BAD_REQUEST_ERROR));
       }
       if (err.code === 11000) {
-        next(new AlreadyExistsError('User with this email already exists'));
+        next(new AlreadyExistsError(MESSAGES.USER_ALREADY_EXISTS_ERROR));
       } else {
         next(err);
       }
@@ -100,26 +88,30 @@ const createNewUser = (req, res, next) => {
 };
 
 const editUserInfo = (req, res, next) => {
-  const { name, about } = req.body;
+  const { name, email } = req.body;
   const id = req.user._id;
   User.findByIdAndUpdate(
     id,
-    { name, about },
+    { name, email },
     { new: true, runValidators: true },
   )
     .orFail()
     .then((user) => res.status(constants.HTTP_STATUS_OK).send(user))
     .catch((error) => {
       if (error instanceof Error.ValidationError) {
-        next(new BadRequestError('Validation error'));
-      } else next(error);
+        next(new BadRequestError(MESSAGES.BAD_REQUEST_ERROR));
+      }
+      if (error.code === 11000) {
+        next(new AlreadyExistsError(MESSAGES.USER_ALREADY_EXISTS_ERROR));
+      } else {
+        next(error);
+      }
     });
 };
 
 module.exports = {
   login,
   deleteAuth,
-  getAllUsers,
   getUserById,
   createNewUser,
   editUserInfo,

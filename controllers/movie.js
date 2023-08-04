@@ -4,6 +4,7 @@ const Movie = require('../models/movie');
 const BadRequestError = require('../errors/BadRequestError');
 const AuthorizationError = require('../errors/AuthorizationError');
 const NotFoundError = require('../errors/NotFoundError');
+const MESSAGES = require('../utils/messages');
 
 const getMovie = (req, res, next) => {
   Movie.find({})
@@ -43,7 +44,7 @@ const createMovie = (req, res, next) => {
     .then((movie) => res.status(constants.HTTP_STATUS_CREATED).send(movie))
     .catch((error) => {
       if (error instanceof Error.ValidationError) {
-        next(new BadRequestError('Validation error'));
+        next(new BadRequestError(MESSAGES.BAD_REQUEST_ERROR));
       } else {
         next(error);
       }
@@ -73,14 +74,14 @@ const deleteMovie = (req, res, next) => {
             console.log(error);
             next(
               new BadRequestError(
-                `An error occurred when deleting movie ${movieId}`,
+                MESSAGES.BAD_REQUEST_ERROR,
               ),
             );
           });
       } else {
         next(
           new AuthorizationError(
-            `An error occurred deleting movie: ${movieId}. It is not owned by ${req.user._id}. The real owner is ${owner}`,
+            MESSAGES.AUTHENTIFICATION_ERROR,
           ),
         );
       }
@@ -88,9 +89,9 @@ const deleteMovie = (req, res, next) => {
     .catch((error) => {
       console.log(error);
       if (error instanceof Error.CastError) {
-        next(new BadRequestError('oh no!'));
+        next(new BadRequestError(MESSAGES.BAD_REQUEST_ERROR));
       } else if (error instanceof Error.DocumentNotFoundError) {
-        next(new NotFoundError(`Movie with id ${movieId} not found`));
+        next(new NotFoundError(MESSAGES.MOVIE_NOT_FOUND_ERROR));
       } else {
         next(error);
       }

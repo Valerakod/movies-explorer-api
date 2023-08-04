@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const MESSAGES = require('../utils/messages');
 
 const movieSchema = new mongoose.Schema({
   country: {
@@ -27,7 +28,7 @@ const movieSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: (avatar) => validator.isURL(avatar),
-      message: 'Некорректная ссылка!',
+      message: MESSAGES.INVALID_LINK,
     },
   },
   trailerLink: {
@@ -35,7 +36,7 @@ const movieSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: (avatar) => validator.isURL(avatar),
-      message: 'Некорректная ссылка!',
+      message: MESSAGES.INVALID_LINK,
     },
   },
   thumbnail: {
@@ -43,7 +44,7 @@ const movieSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: (avatar) => validator.isURL(avatar),
-      message: 'Некорректная ссылка!',
+      message: MESSAGES.INVALID_LINK,
     },
   },
   owner: {
